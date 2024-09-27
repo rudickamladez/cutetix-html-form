@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nová rezervace</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        form.tickets {
+            display: grid;
+            margin: auto;
+        }
+
+        form.tickets input,
+        form.tickets select,
+        form.tickets button {
+            max-width: 360px;
+            margin: 5px 0px 0px 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Rezervace vstupenek do Pohádkového lesa</h2>
+    <p>Pro objednání rezervace vyplňte následující formulář.
+        Všechna vstupní pole jsou povinná.
+        <b>Jedna rezervace platí pro jedno dítě.</b>
+        Údaje poskytnuté v&nbsp;rámci rezervace budou použity jen pro&nbsp;účely této akce, vyplněním formuláře s těmito
+        podmínkami souhlasíte.
+    </p>
+    <span id="end-of-reservations"></span>
+    <div id="serverOutOfService" class="hidden">
+        Omlouváme se, ale něco se pokazilo.
+        Napište nám na <a href="mailto:matuska.lukas@cutetix.com">matuska.lukas@cutetix.com</a>.
+    </div>
+    <div id="reservationsClosed" class="hidden">
+        Rezervace vstupenek byly uzavřeny
+    </div>
+    <div id="content">
+        <span id="end-of-reservations-text" class="hidden">Rezervace vstupenek končí</span>
+        <form action="#" method="post" role="form" id="new-ticket-form" class="tickets">
+            <input type="text" name="name" id="firstname" placeholder="Křestní jméno dítěte" required>
+            <input type="text" name="name" id="lastname" placeholder="Příjmení dítěte" required>
+            <input type="email" name="email" id="email" placeholder="Email rodiče" required>
+            <select id="time" required></select>
+            <span class="hidden" id="selectTime">
+                Vyberte čas
+            </span>
+            <span class="hidden" id="selectValidTime">
+                Vyberte si platný čas.
+            </span>
+            <span class="hidden" id="freePositions">
+                volných míst
+            </span>
+            <span class="hidden" id="freePosition">
+                volné místo
+            </span>
+            <div class="loading" id="loading">Načítání</div>
+            <div class="error-message" id="error-message" style="display: none;">Nastala chyba.</div>
+            <div class="sent-message" id="sent-message" style="display: none;">
+                Úspěšně jste vytvořil/a rezervaci vstupenky. Pro zkontrolujte si prosím, že Vám došel potvrzovací email,
+                který jsme Vám zaslali na Vámi zadanou emailovou adresu. Pokud Vám email nedorazil, tak nám prosím
+                napište
+                email na <a href="mailto:matuska.lukas@cutetix.com">matuska.lukas@cutetix.com</a>.
+            </div>
+            <button type="submit" id="submit-button">Objednat</button>
+        </form>
+    </div>
+    <script>
+        // Example POST method implementation:
+        async function postData(url = '', data = {}) {
+            // Default options are marked with *
+            const response = await fetch((API.endpoint + url), {
+                method: 'POST', // *GET, POST, PUT, DELETE, etc.
+                mode: 'cors', // no-cors, *cors, same-origin
+                cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+                credentials: 'same-origin', // include, *same-origin, omit
+                headers: {
+                    'Content-Type': 'application/json'
+                    // 'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                redirect: 'follow', // manual, *follow, error
+                referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+                body: JSON.stringify(data) // body data type must match "Content-Type" header
+            })
+            return response;
+        }
+
+        async function getData(path = '', data = {}) {
+            const url = new URL(API.endpoint + path)
+            const keys = Object.keys(data)
+            const values = Object.values(data)
+            for (let i = 0; i < values.length; i++) {
+                let value = values[i]
+                if (typeof value == 'object') {
+                    value = JSON.stringify(value)
+                }
+                url.searchParams.set(keys[i], value)
+            }
+            const response = await fetch(url, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                redirect: 'follow',
+                referrerPolicy: 'no-referrer'
+            })
+            return response.json()
+        }
+
+        var API = {
+            endpoint: "https://api.cutetix.com",
+            ticket: {
+                easy: function (
+                    firstname,
+                    lastname,
+                    email,
+                    time
+                ) {
+                    return postData(
+                        '/tickets/easy',
+                        {
+                            firstname: firstname.trim(),
+                            lastname: lastname.trim(),
+                            email: email.trim(),
+                            group_id: time,
+                        }
+                    )
+                },
+
+
+                cancel: function (
+                    id,
+                    email
+                ) {
+                    return postData(
+                        '/tickets/cancel',
+                        {
+                            id,
+                            email: email.trim(),
+                        }
+                    )
+                },
+            },
+
+            times: {
+                active: function () {
+                    return getData(
+                        '/ticket_groups/by-event/2'
+                    )
+                }
+            },
+
+            year: {
+                active: function () {
+                    return getData(
+                        '/events/2'
+                    )
+                }
+            },
+        }
+        function writeEndOfReservationSentence() {
+            const endOfReservationDOM = document.getElementById("end-of-reservations");
+            const endOfReservationTextDOM = document.getElementById("end-of-reservations-text");
+            const reservationsClosedDOM = document.getElementById("reservationsClosed");
+            const contentDOM = document.getElementById("content");
+            API.year.active()
+                .then((year) => {
+                    if (!year) {
+                        // Just don't change the text with info about reservation end.
+                        return;
+                    }
+                    const d = new Date(year.tickets_sales_end);
+
+                    // Prepare formatted date in EN and CS
+                    let timeFormatted = d.toLocaleString();
+                    if (window.location.pathname.includes("cs")) {
+                        timeFormatted = `${d.getDate()}. ${(d.getMonth() + 1)}. ${d.getFullYear()} v ${d.getHours()}:${d.getMinutes() == 0 ? "00" : d.getMinutes()}`;
+                    }
+
+                    // Add formatted date to text about end of reservation
+                    endOfReservationDOM.innerText = `${endOfReservationTextDOM.innerText} ${timeFormatted}.`;
+
+                    // Closed reservations
+                    if (d < new Date()) {
+                        reservationsClosedDOM.classList = "";
+                        contentDOM.classList = "hidden";
+                        // Add formatted date to text about closed of reservation
+                        reservationsClosedDOM.innerText = `${reservationsClosedDOM.innerText} ${timeFormatted}.`;
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                    // Just don't change the text with info about reservation end.
+                })
+        }
+
+        function updateTimes() {
+            const loadingDOM = document.getElementById("loading");
+            const contentDOM = document.getElementById("content");
+            const formDOM = document.getElementById("new-ticket-form");
+            const serverOutOfServiceDOM = document.getElementById("serverOutOfService");
+            loadingDOM.style = "display: initial;";
+            const selectTimeDOM = document.getElementById("selectTime");
+            const defaultTimeOptionDOM = document.createElement("option");
+            defaultTimeOptionDOM.innerText = selectTimeDOM.innerText;
+            defaultTimeOptionDOM.selected = true;
+            defaultTimeOptionDOM.disabled = true;
+            defaultTimeOptionDOM.value = "default";
+            API.times.active()
+                .then((times) => {
+                    console.log(times);
+                    times.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                    const select = document.getElementById("time");
+                    select.innerHTML = "";
+                    select.appendChild(defaultTimeOptionDOM);
+                    for (var i = 0; i < times.length; i++) {
+                        var opt = times[i];
+                        var el = document.createElement("option");
+                        if (opt.free_positions <= 0) {
+                            el.textContent = `${opt.name} - 0 ${document.getElementById("freePositions").innerText}`;
+                            el.disabled = "disabled";
+                            el.value = "null";
+                        } else if (opt.free_positions == 1) {
+                            el.textContent = `${opt.name} - ${document.getElementById("freePosition").innerText}: ${opt.free_positions}`;
+                            el.value = opt._id;
+                        } else {
+                            el.textContent = `${opt.name} - ${document.getElementById("freePositions").innerText}: ${opt.free_positions}`;
+                            el.value = opt.id;
+                        }
+                        select.appendChild(el);
+                    }
+                    loadingDOM.style = "display: none;"
+                })
+                .catch((err) => {
+                    console.error(err)
+
+                    // When API backend is not available show error message
+                    loadingDOM.style = "display: none;";
+                    formDOM.style = "display: none;";
+                    contentDOM.style = "display: none;";
+                    serverOutOfServiceDOM.style = "display: initial;";
+                });
+        }
+
+        window.addEventListener("load", function () {
+            // DOM variables
+            const contentDOM = document.getElementById("content");
+            const serverOutOfServiceDOM = document.getElementById("serverOutOfService");
+            const formDOM = document.getElementById("new-ticket-form");
+            const loadingDOM = document.getElementById("loading");
+            const errorMessageDOM = document.getElementById("error-message");
+            const sentMessageDOM = document.getElementById("sent-message");
+            const submitButtonDOM = document.getElementById("submit-button");
+            const orderAnotherTicketButtonDOM = document.getElementById("order-another-ticket-button");
+            const timeDOM = document.getElementById("time");
+            const selectValidTimeDOM = document.getElementById("selectValidTime");
+
+            writeEndOfReservationSentence();
+            // Fetch times from API
+            updateTimes();
+
+            // buyer DOM variables
+            const firstnameDOM = document.getElementById("firstname");
+            const lastnameDOM = document.getElementById("lastname");
+            const emailDOM = document.getElementById("email");
+
+            function sendData() {
+                loadingDOM.style = "display: initial;";
+
+                // POST API
+                API.ticket.easy(
+                    firstnameDOM.value,
+                    lastnameDOM.value,
+                    emailDOM.value,
+                    timeDOM.value,
+                ).then(async (response) => {
+                    console.log(response);
+                    loadingDOM.style = "display: none;";
+                    if (response.status != 200) {
+                        const errorText = await response.text();
+                        console.error(errorText);
+                        if (response.status == 400) {
+                            try {
+                                const errorTextInJSON = JSON.parse(errorText);
+                                let message = "";
+                                console.log(errorTextInJSON);
+                                switch (errorTextInJSON.message) {
+                                    case 'Bad time.':
+                                        message = "Špatný čas.";
+                                        break;
+                                    case "Not found time for new ticket.":
+                                        message = "Nebyl nalezen čas pro novou rezervaci.";
+                                        break;
+                                    case "Cannot create new ticket! Time is full.":
+                                        message = "Nelze vytvořit rezervaci, vybraný čas je plný. Vyberte si prosím jiný.";
+                                        submitButtonDOM.style = "display: initial;";
+                                        break;
+                                    case "End of reservations.":
+                                        message = "Nelze vytvořit objednávku, protože rezervaci jsou již uzavřeny.";
+                                        errorMessageDOM.innerHTML = message;
+                                        errorMessageDOM.style = "display: initial;";
+                                        return;
+                                        break;
+                                }
+                                errorMessageDOM.innerHTML += `<br/>${message}`;
+                                errorMessageDOM.style = "display: initial;";
+                                return;
+                            }
+                            catch (exception) {
+                                console.error(exception);
+                            }
+                        }
+                        errorMessageDOM.innerHTML += `<br/>${errorText}`;
+                        errorMessageDOM.style = "display: initial;";
+                    } else {
+                        const res = await response.text();
+                        // console.log(res);
+                        firstnameDOM.value = "";
+                        lastnameDOM.value = "";
+                        updateTimes();
+                        sentMessageDOM.style = "display: initial;";
+                        orderAnotherTicketButtonDOM.style = "display: initial;";
+                        setTimeout(() => {
+                            sentMessageDOM.style = "display: hide;";
+                        }, 20000);
+                    }
+                });
+            }
+
+            // Access the form element...
+            const form = document.getElementById("new-ticket-form");
+
+            // ...and take over its submit event.
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+                submitButtonDOM.style = "display: none;";
+                errorMessageDOM.style = "display: none;";
+                sentMessageDOM.style = "display: none;";
+
+                if (timeDOM.value == 'default') {
+                    errorMessageDOM.innerHTML = selectValidTimeDOM.innerText;
+                    errorMessageDOM.style = "display: initial;";
+                    submitButtonDOM.style = "display: initial;";
+                    return;
+                }
+
+                sendData();
+            });
+        });
+    </script>
+</body>
+
+</html>

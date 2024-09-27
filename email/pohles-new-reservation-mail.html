@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="cs">
+
+<head>
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Nová rezervace vstupenky</title>
+</head>
+
+<body>
+    <p>Dobrý den,</p>
+    <p>zde je potvrzení Vaší rezervace:<br>
+        <br>
+        ID: {{ ticket.id }}<br>
+        Křestní jméno: {{ ticket.firstname }}<br>
+        Příjmení: {{ ticket.lastname }}<br>
+        Email: {{ ticket.email }}<br>
+        Čas: {{ ticket.group.name }}<br>
+    </p>
+    <br>
+    <p>
+        Prosíme Vás, abyste se dostavili nejpozději 15&nbsp;minut před Vaším zarezervovaným časem, jinak bude Vaše rezervace zrušena.<br>
+    </p>
+</body>
+
+</html>

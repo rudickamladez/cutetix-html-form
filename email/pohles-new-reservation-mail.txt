@@ -1,0 +1,10 @@
+Dobrý den,
+zde je potvrzení Vaší rezervace:
+
+ID: {{ ticket.id }}
+Křestní jméno: {{ ticket.firstname }}
+Příjmení: {{ ticket.lastname }}
+Email: {{ ticket.email }}
+Čas: {{ ticket.group.name }}
+
+Prosíme Vás, abyste se dostavili nejpozději 15&nbsp;minut před Vaším zarezervovaným časem, jinak bude Vaše rezervace zrušena.
