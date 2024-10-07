@@ -1,0 +1,15 @@
+Dobrý den,
+Vaše rezervace s následujícími údaji byla zrušena:
+
+ID: {{ ticket.id }}
+Křestní jméno: {{ ticket.firstname }}
+Příjmení: {{ ticket.lastname }}
+Email: {{ ticket.email }}
+Čas: {{ ticket.group.name }}
+
+Děkujeme za zrušení a těšíme se na Vás snad někdy příště!
+
+S přáním hezkého dne
+Pořadatelé Pohádkového lesa v Rudici
+Email: pohles@rudickamladez.cz
+www pohles.rudickamladez.cz
